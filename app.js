@@ -5,7 +5,7 @@ import './threejs/VRControls.js';
 import './threejs/VREffect.js';
 import './webvr-boilerplate/webvr-polyfill.js';
 import { VRButton } from './threejs/VRButton.js';
-import VRDesktopControls from './VRDesktopControls.js';
+import { VRDesktopControls } from './VRDesktopControls.js';
 
 window.addEventListener('DOMContentLoaded', init);
 window.addEventListener('deviceorientation', updateOrientationControls, true);
