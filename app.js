@@ -1,3 +1,10 @@
+import 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.min.js';
+import 'https://cdn.jsdelivr.net/npm/webvr-boilerplate@latest/build/webvr-manager.min.js';
+import 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r123/examples/js/loaders/GLTFLoader.js';
+import './threejs/VRControls.js';
+import './threejs/VREffect.js';
+import './webvr-boilerplate/webvr-polyfill.js';
+import { VRButton } from './threejs/VRButton.js';
 import VRDesktopControls from './VRDesktopControls.js';
 
 window.addEventListener('DOMContentLoaded', init);
@@ -28,7 +35,7 @@ function init() {
   document.body.appendChild(VRButton.createButton(renderer))
   // const polyfill = new WebVRPolyfill();
 //   console.log(window.devicePixelRatio);
-//   console.log(width + ", " + height);
+//   console.log(width + ', ' + height);
 
   // immediately use the texture for material creation
   // const material = new THREE.MeshBasicMaterial( { map: texture } );
@@ -103,7 +110,7 @@ function init() {
       // model = gltf.scene;
       // console.log(model)
       for (let i = 0; i < count; i++) {
-        // model.name = "model_with_cloth";
+        // model.name = 'model_with_cloth';
         const clone = cloneGltf(gltf);
         const copy = clone.scene;
         copy.scale.set(100, 100, 100);

@@ -166,4 +166,4 @@ class VRButton {
 
 }
 
-// export { VRButton };
+export { VRButton };
