@@ -17,6 +17,8 @@ const controls = [];
 let textures = [];
 let clock, manager, scene, camera;
 
+let lightHelper;
+
 const init = async () => {
   // setup renderer
   const renderer = new THREE.WebGLRenderer({
@@ -104,8 +106,16 @@ const init = async () => {
   );
 
   // setup light
-  const light = new THREE.AmbientLight(0xFFFFFF, 1.0);
+  const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.1);
+  scene.add(ambientLight);
+  // スポットライト光源を作成
+  // new THREE.SpotLight(色, 光の強さ, 距離, 照射角, ボケ具合, 減衰率)
+  const light = new THREE.SpotLight(0xFFFFFF, 3, RADIUS * 2, Math.PI / 5, 10, 0.5);
+  light.position.set(0, 100, -10);
+  light.target = camera;
   scene.add(light);
+  lightHelper = new THREE.SpotLightHelper(light);
+  scene.add(lightHelper);
 
   // for debug
   const axis = new THREE.AxesHelper(1000);
@@ -125,6 +135,9 @@ const render = () => {
   if (mixers.length) {
     Promise.all(mixers.map(m => new Promise(() => m.update(delta))));
   }
+
+  // ヘルパーを更新
+  lightHelper.update();
 
   requestAnimationFrame(render);
 
