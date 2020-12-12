@@ -92,7 +92,6 @@ class VRDesktopControls {
   }
 
   onMouseDown (event) {
-    console.log(this)
     if (this.domElement !== document) {
       this.domElement.focus();
     }
@@ -149,8 +148,6 @@ class VRDesktopControls {
     // var rect = _domElement.getBoundingClientRect();
     // _mouse.x = ( ( event.clientX - rect.left ) / rect.width ) * 2 - 1;
     // _mouse.y = - ( ( event.clientY - rect.top ) / rect.height ) * 2 + 1;
-    // console.log(this.viewHalfX, this.viewHalfY)
-    // console.log(this.mouseX, this.mouseY)
   }
 
   onKeyDown (event) {
@@ -224,7 +221,7 @@ class VRDesktopControls {
     }
 
     var actualMoveSpeed = delta * this.movementSpeed;
-    // console.log(this.moveForward, this.moveBackward, this.moveLeft, this.moveRight, this.moveDown, this.autoForward)
+
     if (this.moveForward || (this.autoForward && !this.moveBackward))
       this.object.translateZ(-(actualMoveSpeed + this.autoSpeedFactor));
     if (this.moveBackward)
@@ -254,9 +251,7 @@ class VRDesktopControls {
 
     const veloX = (this.mouseX - this.prevMouseX) / delta * this.lookSpeed;
     const veloY = (this.mouseY - this.prevMouseY) / delta * this.lookSpeed;
-    console.log(veloX, veloY);
-    // console.log(this.mouseX, this.mouseY)
-    // console.log(this.prevMouseX, this.prevMouseY)
+
     // lon -= this.mouseX * actualLookSpeed;
     // if ( this.lookVertical ) lat -= this.mouseY * actualLookSpeed * verticalLookRatio;
     this.lon -= veloX;
@@ -279,7 +274,6 @@ class VRDesktopControls {
 
     targetPosition.setFromSphericalCoords(1, phi, theta).add(position);
 
-    // console.log(position, targetPosition)
     this.object.lookAt(targetPosition);
 
     this.prevMouseX = this.mouseX;

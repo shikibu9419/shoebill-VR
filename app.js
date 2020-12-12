@@ -13,6 +13,8 @@ window.addEventListener('deviceorientation', updateOrientationControls, true);
 let camera = null;
 let controls;
 const RADIUS = 150
+const SHOEBILL_COUNT = 4;
+const GLTF_PATH = 'shoebill';
 
 function updateOrientationControls(e) {
   if (!e.alpha) { return; }
@@ -23,240 +25,125 @@ function updateOrientationControls(e) {
 }
 
 function init() {
-  // レンダラーを作成
+  // setup renderer
   const renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#canvas'),
   });
-  // ウィンドウサイズ設定
-  const width = document.getElementById('main_canvas').getBoundingClientRect().width;
-  const height = document.getElementById('main_canvas').getBoundingClientRect().height;
+  const width = document.getElementById('canvas-wrapper').getBoundingClientRect().width;
+  const height = document.getElementById('canvas-wrapper').getBoundingClientRect().height;
+
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(width, height);
-  document.body.appendChild(VRButton.createButton(renderer))
-  // const polyfill = new WebVRPolyfill();
-//   console.log(window.devicePixelRatio);
-//   console.log(width + ', ' + height);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.xr.enabled = true;
 
-  // immediately use the texture for material creation
-  // const material = new THREE.MeshBasicMaterial( { map: texture } );
+  // add VRButton
+  document.body.appendChild(VRButton.createButton(renderer));
 
-  // console.log(texture, material)
-
-  // console.log(THREE.ShaderChunk.specularmap_fragment)
-
-  let mixer;
+  const mixers = [];
   let clock = new THREE.Clock();
 
-  // シーンを作成
+  // setup scene
   const scene = new THREE.Scene();
 
-  // カメラを作成
+  // setup camera
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
   camera.position.x = 0;
   camera.position.y = 100;
-  // camera.rotation.y = 180;
-  // camera.lookAt(0)
-  // const cameraContainer = new THREE.Object3D();
 
-  // // カメラをコンテナに追加
-  // cameraContainer.add(camera);
-
-  // // カメラ用コンテナをsceneに追加
-  // scene.add(cameraContainer);
-
-  // // コンテナに対して座標を設定することでカメラの座標を変更可能
-  // cameraContainer.position.x = 150;
-  // cameraContainer.position.y = 200;
-
-  // const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  // controls.movementSpeed = 1000;
-  // controls.lookSpeed = 0.1;
   // const vrControls = new THREE.VRControls(camera, (str) => console.log(str))
-  const orbitControls = new VRDesktopControls(camera, renderer.domElement)
-  // controls = orbitControls
-  // controls.addEventListener( 'lock', function () {
-  //   console.log('locked')
-  // } );
+  const desktopControls = new VRDesktopControls(camera, renderer.domElement);
+  desktopControls.lookAt(RADIUS, 100, 0);
 
-  // controls.addEventListener( 'unlock', function () {
-  //   console.log('unlocked')
-  // } );
-
-  // document.addEventListener( 'click', function () {
-  //   controls.lock();
-  // }, false );
-  orbitControls.lookAt(RADIUS, 100, 0)
-
-  var effect = new THREE.VREffect(renderer);
+  const effect = new THREE.VREffect(renderer);
   effect.setSize(window.innerWidth, window.innerHeight);
-
   const manager = new WebVRManager(renderer, effect);
 
-  // Load GLTF or GLB
-  const loader = new THREE.GLTFLoader();
-  const url = 'shoebill/scene.gltf';
-  // const loader = new THREE.FBXLoader();
-  // const url = 'fbx/Shoebill_model.FBX';
-  
-  let model = null;
-  loader.load(
-    url,
-    function (gltf) {
-      console.log(gltf)
-      const count = 4;
-      // const copy = gltf;
-      // copy.scale.set(1, 1, 1);
+  // preload textures
+  const textures = [
+    `${GLTF_PATH}/textures/body_diffuse.png`,
+    `${GLTF_PATH}/textures/wing_diffuse.png`,
+    `${GLTF_PATH}/textures/eyes_specularGlossiness.png`,
+    `${GLTF_PATH}/textures/feather_specularGlossiness.png`,
+    `${GLTF_PATH}/textures/material_specularGlossiness.png`,
+    `${GLTF_PATH}/textures/peck_specularGlossiness.png`,
+    `${GLTF_PATH}/textures/tongue_specularGlossiness.png`,
+    `${GLTF_PATH}/textures/wing_specularGlossiness.png`
+  ].map(s => {
+    const t = new THREE.TextureLoader().load(s)
+    t.outputEncoding = THREE.sRGBEncoding
+    return t
+  })
 
-      // model = gltf.scene;
-      // console.log(model)
-      for (let i = 0; i < count; i++) {
-        // model.name = 'model_with_cloth';
+  // Load GLTF File
+  const loader = new THREE.GLTFLoader();
+  loader.load(
+    `${GLTF_PATH}/scene.gltf`,
+    (gltf) => {
+      for (let i = 0; i < SHOEBILL_COUNT; i++) {
         const clone = cloneGltf(gltf);
         const copy = clone.scene;
         copy.scale.set(100, 100, 100);
-        // console.log(copy)
-        copy.rotation.y = - 2 * Math.PI / count * i - Math.PI / 2;
-        console.log(i, copy.rotation.y)
-        // copy.position.set(RADIUS, 0, 0);
-        copy.position.set(RADIUS * Math.cos(2 * Math.PI / count * i), 0, RADIUS * Math.sin(2 * Math.PI / count * i));
 
-        // let texture = null
-        // texture = new THREE.TextureLoader().load('textures/body_diffuse.png');
-        // texture.outputEncoding = THREE.sRGBEncoding;
-        //   console.log(texture)
-
-        const textures = [
-          // 'fbx/shoebill_bump.png',
-          // 'fbx/shoebill_spec.png',
-          // 'fbx/shoebill_sub.png',
-          // 'fbx/shoebill_diff.png',
-          'shoebill/textures/body_diffuse.png',
-          'shoebill/textures/wing_diffuse.png',
-          'shoebill/textures/eyes_specularGlossiness.png',
-          'shoebill/textures/feather_specularGlossiness.png',
-          'shoebill/textures/material_specularGlossiness.png',
-          'shoebill/textures/peck_specularGlossiness.png',
-          'shoebill/textures/tongue_specularGlossiness.png',
-          'shoebill/textures/wing_specularGlossiness.png'
-        ].map(s => {
-          const t = new THREE.TextureLoader().load(s)
-          t.outputEncoding = THREE.sRGBEncoding
-          return t
-        })
-        // console.log(textures)
+        copy.position.set(RADIUS * Math.cos(2 * Math.PI / SHOEBILL_COUNT * i), 0, RADIUS * Math.sin(2 * Math.PI / SHOEBILL_COUNT * i));
+        copy.rotation.y = - 2 * Math.PI / SHOEBILL_COUNT * i - Math.PI / 2;
 
         copy.traverse((obj) => {
           if (obj.isMesh) {
-            const material = obj.material
+            const material = obj.material;
             textures.forEach(t => {
-              material.specularMap = t
-              material.glossinessMap = t
+              material.specularMap = t;
+              material.glossinessMap = t;
             })
             if (material.name === 'eyelens') {
-              // obj.material.visible = false
-              obj.material.opacity = 0.5
-              obj.material.transparent = true
+              material.opacity = 0.5;
+              material.transparent = true;
             }
-            // material.forEach(mat => {
-            //   mat.bumpMap = textures[0]
-            //   mat.specularMap = textures[1]
-            //   mat.map = textures[2]
-            //   mat.normalMap = textures[3]
-            // })
-            // console.log(material)
-
-            // texture = new THREE.TextureLoader().load('textures/body_diffuse.png');
-            // texture.outputEncoding = THREE.sRGBEncoding;
-            // material.map = texture
-
-            // texture = new THREE.TextureLoader().load('textures/wing_diffuse.png');
-            // texture.outputEncoding = THREE.sRGBEncoding;
-            // material.map = texture
-
-            // const shader = new THREE.ShaderMaterial({
-            //   fragmentShader: document.getElementById('fragmentShader').textContent,
-            //   uniforms: {
-            //     specular: { value: material.specular },
-            //     specularMap: { value: material.specularMap },
-            //     glossiness: { value: material.glossiness },
-            //     glossinessMap: { value: material.glossinessMap },
-            //   }
-            // })
-
-            // console.log(shader)
           }
-        })
+        });
 
-        // // Animation Mixerインスタンスを生成
-        // mixer = new THREE.AnimationMixer(copy);
+        // setup animation
+        const mixer = new THREE.AnimationMixer(copy);
+        const animation = clone.animations.find(a => a.name === 'Shoebill_idle');
+        const action = mixer.clipAction(animation);
+        action.setLoop(THREE.LoopRepeat);
+        action.clampWhenFinished = true;
+        action.play();
 
-        // //Animation Actionを生成
-        // const animation = gltf.animations.find(a => a.name === 'Shoebill_idle')
-        // // console.log(animation)
-        // let action = mixer.clipAction(animation);
+        mixers.push(mixer);
 
-        // //ループ設定
-        // action.setLoop(THREE.LoopRepeat);
-
-        // //アニメーションの最後のフレームでアニメーションが終了
-        // action.clampWhenFinished = true;
-
-        // //アニメーションを再生
-        // action.play();
-        // console.log(copy)
         scene.add(copy);
       }
     },
-    function (error) {
+    (error) => {
       console.log('An error happened');
       console.log(error);
     }
   );
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  // renderer.gammaOutput = true;
-  // renderer.gammaFactor = 2.2;
 
+  // setup light
   const light = new THREE.AmbientLight(0xFFFFFF, 1.0);
   scene.add(light);
-  // // 平行光源
-  // const light = new THREE.DirectionalLight(0xFFFFFF);
-  // // light.intensity = 2; // 光の強さを倍に
-  // light.position.set(1, 1, 1);
-  // // シーンに追加
-  // scene.add(light);
 
+  // for debug
   const axis = new THREE.AxesHelper(1000);
-  scene.add(axis)
+  scene.add(axis);
 
-  // renderer.xr.enabled = true;
+  render();
 
-  // 初回実行
-  tick();
+  function render() {
+    const delta = clock.getDelta();
 
-  function tick() {
-    const r = 400;
     // vrControls.update();
-    orbitControls.update(clock.getDelta());
-    // pointerLockUpdate(orbitControls, clock.getDelta())
+    desktopControls.update(delta);
 
-    // if (model != null) {
-    //   console.log(model);
-    // }
-    // renderer.render(scene, camera);
-    // camera.lookAt(200, 0, 0)
+    requestAnimationFrame(render);
 
-    requestAnimationFrame(tick);
-
-    // camera.lookAt(r * Math.sin(2 * Math.PI / 360 * i), r * Math.cos(2 * Math.PI / 360 * i) + r, 0)
-    // i++;
-    // console.log(i)
-    // camera.lookAt(0)
-
-    if(mixer) {
-      mixer.update(clock.getDelta());
+    if (mixers.length) {
+      Promise.all(mixers.map(m => new Promise(() => m.update(delta))));
     }
 
-    manager.render(scene, camera)
+    manager.render(scene, camera);
   }
 }
 
