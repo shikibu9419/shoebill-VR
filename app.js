@@ -5,33 +5,25 @@ import './threejs/VRControls.js';
 import './threejs/VREffect.js';
 import './webvr-boilerplate/webvr-polyfill.js';
 import { VRButton } from './threejs/VRButton.js';
+import { cloneGltf } from './cloneGLTF.js';
 import { VRDesktopControls } from './VRDesktopControls.js';
 
-window.addEventListener('DOMContentLoaded', init);
-window.addEventListener('deviceorientation', updateOrientationControls, true);
-
-let camera = null;
-let controls;
 const RADIUS = 150
-const SHOEBILL_COUNT = 4;
+const SHOEBILL_COUNT = 6;
 const GLTF_PATH = 'shoebill';
 
-function updateOrientationControls(e) {
-  if (!e.alpha) { return; }
-  controls = new THREE.DeviceOrientationControls(camera, true);
-  controls.connect();
-  controls.update();
-  window.removeEventListener('deviceorientation', updateOrientationControls, true);
-}
+const mixers = [];
+const controls = [];
+let textures = [];
+let clock, manager, scene, camera;
 
-function init() {
+const init = async () => {
   // setup renderer
   const renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#canvas'),
   });
   const width = document.getElementById('canvas-wrapper').getBoundingClientRect().width;
   const height = document.getElementById('canvas-wrapper').getBoundingClientRect().height;
-
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(width, height);
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -40,27 +32,27 @@ function init() {
   // add VRButton
   document.body.appendChild(VRButton.createButton(renderer));
 
-  const mixers = [];
-  let clock = new THREE.Clock();
-
   // setup scene
-  const scene = new THREE.Scene();
+  scene = new THREE.Scene();
 
   // setup camera
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
   camera.position.x = 0;
   camera.position.y = 100;
 
+  // for VR
+  const effect = new THREE.VREffect(renderer);
+  effect.setSize(window.innerWidth, window.innerHeight);
+  manager = new WebVRManager(renderer, effect);
+
+  // setup controls
   // const vrControls = new THREE.VRControls(camera, (str) => console.log(str))
   const desktopControls = new VRDesktopControls(camera, renderer.domElement);
   desktopControls.lookAt(RADIUS, 100, 0);
-
-  const effect = new THREE.VREffect(renderer);
-  effect.setSize(window.innerWidth, window.innerHeight);
-  const manager = new WebVRManager(renderer, effect);
+  controls.push(desktopControls);
 
   // preload textures
-  const textures = [
+  textures = await Promise.all([
     `${GLTF_PATH}/textures/body_diffuse.png`,
     `${GLTF_PATH}/textures/wing_diffuse.png`,
     `${GLTF_PATH}/textures/eyes_specularGlossiness.png`,
@@ -70,10 +62,10 @@ function init() {
     `${GLTF_PATH}/textures/tongue_specularGlossiness.png`,
     `${GLTF_PATH}/textures/wing_specularGlossiness.png`
   ].map(s => {
-    const t = new THREE.TextureLoader().load(s)
-    t.outputEncoding = THREE.sRGBEncoding
-    return t
-  })
+    const t = new THREE.TextureLoader().load(s);
+    t.outputEncoding = THREE.sRGBEncoding;
+    return t;
+  }));
 
   // Load GLTF File
   const loader = new THREE.GLTFLoader();
@@ -89,17 +81,7 @@ function init() {
         copy.rotation.y = - 2 * Math.PI / SHOEBILL_COUNT * i - Math.PI / 2;
 
         copy.traverse((obj) => {
-          if (obj.isMesh) {
-            const material = obj.material;
-            textures.forEach(t => {
-              material.specularMap = t;
-              material.glossinessMap = t;
-            })
-            if (material.name === 'eyelens') {
-              material.opacity = 0.5;
-              material.transparent = true;
-            }
-          }
+          if (obj.isMesh) setupShobillGlTF(obj);
         });
 
         // setup animation
@@ -116,8 +98,8 @@ function init() {
       }
     },
     (error) => {
-      console.log('An error happened');
-      console.log(error);
+      // console.log('An error happened');
+      // console.log(error);
     }
   );
 
@@ -129,67 +111,45 @@ function init() {
   const axis = new THREE.AxesHelper(1000);
   scene.add(axis);
 
+  clock = new THREE.Clock();
   render();
+}
 
-  function render() {
-    const delta = clock.getDelta();
+const render = () => {
+  const delta = clock.getDelta();
 
-    // vrControls.update();
-    desktopControls.update(delta);
+  if (controls.length) {
+    Promise.all(controls.map(c => new Promise(() => c.update(delta))));
+  }
 
-    requestAnimationFrame(render);
+  if (mixers.length) {
+    Promise.all(mixers.map(m => new Promise(() => m.update(delta))));
+  }
 
-    if (mixers.length) {
-      Promise.all(mixers.map(m => new Promise(() => m.update(delta))));
-    }
+  requestAnimationFrame(render);
 
-    manager.render(scene, camera);
+  manager.render(scene, camera);
+}
+
+const setupShobillGlTF = (obj) => {
+  const material = obj.material;
+  textures.forEach(t => {
+    material.specularMap = t;
+    material.glossinessMap = t;
+  })
+  if (material.name === 'eyelens') {
+    material.opacity = 0.5;
+    material.transparent = true;
   }
 }
 
-const cloneGltf = (gltf) => {
-  const clone = {
-    animations: gltf.animations,
-    scene: gltf.scene.clone(true)
-  };
+// const updateOrientationControls = (e) => {
+//   if (!e.alpha) { return; }
+//   const control = new THREE.DeviceOrientationControls(camera, true);
+//   control.connect();
+//   control.update();
+//   window.removeEventListener('deviceorientation', updateOrientationControls, true);
+// }
 
-  const skinnedMeshes = {};
-
-  gltf.scene.traverse(node => {
-    if (node.isSkinnedMesh) {
-      skinnedMeshes[node.name] = node;
-    }
-  });
-
-  const cloneBones = {};
-  const cloneSkinnedMeshes = {};
-
-  clone.scene.traverse(node => {
-    if (node.isBone) {
-      cloneBones[node.name] = node;
-    }
-
-    if (node.isSkinnedMesh) {
-      cloneSkinnedMeshes[node.name] = node;
-    }
-  });
-
-  for (let name in skinnedMeshes) {
-    const skinnedMesh = skinnedMeshes[name];
-    const skeleton = skinnedMesh.skeleton;
-    const cloneSkinnedMesh = cloneSkinnedMeshes[name];
-
-    const orderedCloneBones = [];
-
-    for (let i = 0; i < skeleton.bones.length; ++i) {
-      const cloneBone = cloneBones[skeleton.bones[i].name];
-      orderedCloneBones.push(cloneBone);
-    }
-
-    cloneSkinnedMesh.bind(
-        new THREE.Skeleton(orderedCloneBones, skeleton.boneInverses),
-        cloneSkinnedMesh.matrixWorld);
-  }
-
-  return clone;
-}
+window.addEventListener('DOMContentLoaded', init);
+// window.addEventListener('deviceorientation', updateOrientationControls, true);
