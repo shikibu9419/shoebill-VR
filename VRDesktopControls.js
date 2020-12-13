@@ -59,6 +59,7 @@ class VRDesktopControls {
     this.prevMouseY = 0;
     this.deltaMouseX = 0;
     this.deltaMouseY = 0;
+    this.targetPosition = new THREE.Vector3(0, 100, 1);
 
     this.moveForward = false;
     this.moveBackward = false;
@@ -205,8 +206,6 @@ class VRDesktopControls {
   }
 
   update (delta) {
-    var targetPosition = new THREE.Vector3();
-
     if (this.enabled === false || !this.mouseDragOn)
       return;
 
@@ -272,9 +271,9 @@ class VRDesktopControls {
     this.deltaMouseX = this.mouseX - this.prevMouseX;
     this.deltaMouseY = this.mouseY - this.prevMouseY;
 
-    targetPosition.setFromSphericalCoords(1, phi, theta).add(position);
+    this.targetPosition.setFromSphericalCoords(1, phi, theta).add(position);
 
-    this.object.lookAt(targetPosition);
+    this.object.lookAt(this.targetPosition);
 
     this.prevMouseX = this.mouseX;
     this.prevMouseY = this.mouseY;

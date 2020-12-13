@@ -17,7 +17,7 @@ const controls = [];
 let textures = [];
 let clock, manager, scene, camera;
 
-let lightHelper;
+let light, lightHelper;
 
 const init = async () => {
   // setup renderer
@@ -39,7 +39,6 @@ const init = async () => {
 
   // setup camera
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
-  camera.position.x = 0;
   camera.position.y = 100;
 
   // for VR
@@ -50,7 +49,7 @@ const init = async () => {
   // setup controls
   // const vrControls = new THREE.VRControls(camera, (str) => console.log(str))
   const desktopControls = new VRDesktopControls(camera, renderer.domElement);
-  desktopControls.lookAt(RADIUS, 100, 0);
+  desktopControls.lookAt(0, 100, RADIUS);
   controls.push(desktopControls);
 
   // preload textures
@@ -79,8 +78,9 @@ const init = async () => {
         const copy = clone.scene;
         copy.scale.set(100, 100, 100);
 
-        copy.position.set(RADIUS * Math.cos(2 * Math.PI / SHOEBILL_COUNT * i), 0, RADIUS * Math.sin(2 * Math.PI / SHOEBILL_COUNT * i));
-        copy.rotation.y = - 2 * Math.PI / SHOEBILL_COUNT * i - Math.PI / 2;
+        const phi = 2 * Math.PI / SHOEBILL_COUNT * i;
+        copy.position.setFromCylindricalCoords(RADIUS, phi, 0);
+        copy.rotation.y = phi + Math.PI;
 
         copy.traverse((obj) => {
           if (obj.isMesh) setupShobillGlTF(obj);
@@ -106,20 +106,15 @@ const init = async () => {
   );
 
   // setup light
-  const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.1);
-  scene.add(ambientLight);
-  // スポットライト光源を作成
-  // new THREE.SpotLight(色, 光の強さ, 距離, 照射角, ボケ具合, 減衰率)
-  const light = new THREE.SpotLight(0xFFFFFF, 3, RADIUS * 2, Math.PI / 5, 10, 0.5);
-  light.position.set(0, 100, -10);
+  light = new THREE.SpotLight(0xFFFFFF, 1, RADIUS * 5, Math.PI / 5, 10, 0.8);
   light.target = camera;
   scene.add(light);
-  lightHelper = new THREE.SpotLightHelper(light);
-  scene.add(lightHelper);
 
   // for debug
   const axis = new THREE.AxesHelper(1000);
   scene.add(axis);
+  // lightHelper = new THREE.SpotLightHelper(light);
+  // scene.add(lightHelper);
 
   clock = new THREE.Clock();
   render();
@@ -136,8 +131,10 @@ const render = () => {
     Promise.all(mixers.map(m => new Promise(() => m.update(delta))));
   }
 
-  // ヘルパーを更新
-  lightHelper.update();
+  const cameraTargetPos = controls[0].targetPosition;
+  light.position.set(- cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, - cameraTargetPos.z * 10);
+
+  // lightHelper.update();
 
   requestAnimationFrame(render);
 
