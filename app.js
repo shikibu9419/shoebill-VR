@@ -7,14 +7,18 @@ import './webvr-boilerplate/webvr-polyfill.js';
 import { VRButton } from './threejs/VRButton.js';
 import { cloneGltf } from './cloneGLTF.js';
 import { VRDesktopControls } from './VRDesktopControls.js';
+import { SHOEBILL_COUNT, RADIUS } from './utils.js';
+import * as kagome from './kagome.js'
 
-const RADIUS = 150
-const SHOEBILL_COUNT = 6;
+let situation = kagome;
+
 const GLTF_PATH = 'shoebill';
 
 const mixers = [];
 const controls = [];
+let animations = {};
 let textures = [];
+const shoebills = [];
 let clock, manager, scene, camera;
 
 let light, lightHelper;
@@ -73,31 +77,26 @@ const init = async () => {
   loader.load(
     `${GLTF_PATH}/scene.gltf`,
     (gltf) => {
+      animations = gltf.animations.reduce((acc, cur) => ({ ...acc, [cur.name]: cur }), {});
+
       for (let i = 0; i < SHOEBILL_COUNT; i++) {
         const clone = cloneGltf(gltf);
         const copy = clone.scene;
         copy.scale.set(100, 100, 100);
 
-        const phi = 2 * Math.PI / SHOEBILL_COUNT * i;
-        copy.position.setFromCylindricalCoords(RADIUS, phi, 0);
-        copy.rotation.y = phi + Math.PI;
+        situation.shoebillPosition(copy, i);
+        // copy.rotation.y = phi + Math.PI;
 
         copy.traverse((obj) => {
           if (obj.isMesh) setupShobillGlTF(obj);
         });
 
-        // setup animation
-        const mixer = new THREE.AnimationMixer(copy);
-        const animation = clone.animations.find(a => a.name === 'Shoebill_idle');
-        const action = mixer.clipAction(animation);
-        action.setLoop(THREE.LoopRepeat);
-        action.clampWhenFinished = true;
-        action.play();
+        mixers.push(new THREE.AnimationMixer(copy));
 
-        mixers.push(mixer);
-
+        shoebills.push(copy);
         scene.add(copy);
       }
+      animate();
     },
     (error) => {
       // console.log('An error happened');
@@ -128,11 +127,18 @@ const render = () => {
   }
 
   if (mixers.length) {
-    Promise.all(mixers.map(m => new Promise(() => m.update(delta))));
+    Promise.all(mixers.map(m => new Promise(() => {
+      m.update(delta);
+      // console.log(m.time, m.timeScale, m)
+    })));
+  }
+
+  if (shoebills.length) {
+    Promise.all(shoebills.map((s) => new Promise(situation.shoebillMovement(s, delta))))
   }
 
   const cameraTargetPos = controls[0].targetPosition;
-  light.position.set(- cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, - cameraTargetPos.z * 10);
+  light.position.set(-cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, -cameraTargetPos.z * 10);
 
   // lightHelper.update();
 
