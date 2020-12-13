@@ -21,9 +21,9 @@ let textures = [];
 const shoebills = [];
 const flyings = [];
 const landings = [];
-let clock, manager, scene, camera;
-
-let light;
+let clock, manager, scene, camera, gltf, light;
+let totalTime = 0;
+let eventsCount = 1;
 
 const init = async () => {
   // setup renderer
@@ -78,12 +78,13 @@ const init = async () => {
   const loader = new THREE.GLTFLoader();
   loader.load(
     `${GLTF_PATH}/scene.gltf`,
-    (gltf) => {
+    (origin) => {
+      gltf = origin;
+
       animations = gltf.animations.reduce((acc, cur) => ({ ...acc, [cur.name]: cur }), {});
 
       for (let i = 0; i < SHOEBILL_COUNT; i++) {
-        const clone = cloneGltf(gltf);
-        const copy = clone.scene;
+        const copy = cloneGltf(gltf);
         copy.scale.set(100, 100, 100);
 
         situation.shoebillPosition(copy, i);
@@ -100,35 +101,6 @@ const init = async () => {
       }
       animate();
 
-      const clone = cloneGltf(gltf);
-      const copy = clone.scene;
-      copy.scale.set(100, 100, 100);
-
-      const radius = getRandomInt(300) + RADIUS * 3;
-      const theta = Math.PI / 2 * (Math.random());
-      // 正面 +-45度
-      // copy.rotation.y = theta + Math.PI * (Math.random() / 2 - 5 / 4);
-      copy.rotation.y = theta + Math.PI;
-      copy.position.setFromCylindricalCoords(1000, theta, 200);
-
-      copy.destination = { radius, theta };
-
-      copy.traverse((obj) => {
-        if (obj.isMesh) setupShobillGLTF(obj);
-      });
-
-      const mixer = new THREE.AnimationMixer(copy);
-      const animation = animations.Shoebill_fly;
-      const flyEnd = animations.Shoebill_fly_end;
-      const idle = animations.Shoebill_idle;
-      const action = mixer.clipAction(animation).setLoop(THREE.LoopRepeat);
-      mixer.clipAction(flyEnd).setLoop(THREE.LoopOnce);
-      mixer.clipAction(idle).setLoop(THREE.LoopRepeat);
-      action.play();
-
-      mixers.push(mixer);
-      flyings.push(copy);
-      scene.add(copy);
     },
     (error) => {
       // console.log('An error happened');
@@ -178,8 +150,52 @@ const animate = () => {
   })
 }
 
+const addShoebill = () => {
+  const flyAway = !getRandomInt(5);
+
+  const copy = cloneGltf(gltf);
+  copy.scale.set(100, 100, 100);
+
+  let radius = getRandomInt(300) + RADIUS * 3;
+  const theta = Math.PI / 2 * (Math.random());
+  // 正面 +-45度
+  // copy.rotation.y = theta + Math.PI * (Math.random() / 2 - 5 / 4);
+  copy.rotation.y = theta + Math.PI;
+  copy.position.setFromCylindricalCoords(1000, theta, 200);
+
+  if (flyAway) {
+    radius = -1000;
+    copy.flyAway = flyAway;
+  }
+  copy.destination = { radius, theta };
+
+  copy.traverse((obj) => {
+    if (obj.isMesh) setupShobillGLTF(obj);
+  });
+
+  const mixer = new THREE.AnimationMixer(copy);
+  const animation = animations.Shoebill_fly;
+  const flyEnd = animations.Shoebill_fly_end;
+  const idle = animations.Shoebill_idle;
+  const action = mixer.clipAction(animation).setLoop(THREE.LoopRepeat);
+  mixer.clipAction(flyEnd).setLoop(THREE.LoopOnce);
+  mixer.clipAction(idle).setLoop(THREE.LoopRepeat);
+  action.play();
+
+  mixers.push(mixer);
+  flyings.push(copy);
+  scene.add(copy);
+}
+
 const render = () => {
   const delta = clock.getDelta();
+  totalTime += delta;
+
+  if (totalTime > 30 * eventsCount) {
+    console.log('ADD SHOEBILL!!');
+    addShoebill();
+    eventsCount++;
+  }
 
   if (controls.length) {
     Promise.all(controls.map(c => new Promise(() => c.update(delta))));
@@ -198,6 +214,16 @@ const render = () => {
   if (flyings.length) {
     Promise.all(flyings.map((s, index) => new Promise(() => {
       const r = Math.sqrt(Math.pow(s.position.x, 2) + Math.pow(s.position.z, 2));
+
+      if (s.flyAway) {
+        if (r > 1100) {
+          s.clear();
+          flyings.splice(index, 1);
+        }
+        s.position.add(new THREE.Vector3(-50 * delta * Math.sin(s.destination.theta), 0, -50 * delta * Math.cos(s.destination.theta)))
+        return;
+      }
+
       if (r - s.destination.radius > 50) {
         s.position.setFromCylindricalCoords(r - delta * 50, s.destination.theta, 200);
       } else {

@@ -1,8 +1,5 @@
 export const cloneGltf = (gltf) => {
-  const clone = {
-    animations: gltf.animations,
-    scene: gltf.scene.clone(true)
-  };
+  const clone = gltf.scene.clone(true)
 
   const skinnedMeshes = {};
 
@@ -15,7 +12,7 @@ export const cloneGltf = (gltf) => {
   const cloneBones = {};
   const cloneSkinnedMeshes = {};
 
-  clone.scene.traverse(node => {
+  clone.traverse(node => {
     if (node.isBone) {
       cloneBones[node.name] = node;
     }
