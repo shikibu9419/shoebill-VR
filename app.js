@@ -100,12 +100,6 @@ const init = async () => {
         scene.add(copy);
       }
       animate();
-
-      var size = 10000;
-      var step = 100;
-
-      var gridHelper = new THREE.GridHelper(size, step);
-      scene.add(gridHelper);
     },
     (error) => {
       // console.log('An error happened');
@@ -118,6 +112,12 @@ const init = async () => {
   light.target = camera;
   scene.add(light);
   scene.add(new THREE.AmbientLight(0xFFFFFF, 0.3));
+
+  // var size = 10000;
+  // var step = 100;
+
+  // var gridHelper = new THREE.GridHelper(size, step);
+  // scene.add(gridHelper);
 
   clock = new THREE.Clock();
 
@@ -174,8 +174,9 @@ const addShoebill = () => {
 const render = () => {
   const delta = clock.getDelta();
   totalTime += delta;
+  const fps = !delta ? 100 : 1 / delta;
 
-  if (totalTime > 10 * eventsCount) {
+  if (totalTime > 10 * eventsCount && fps > 40) {
     addShoebill();
     eventsCount++;
   }
