@@ -21,13 +21,13 @@ let textures = [];
 const shoebills = [];
 const flyings = [];
 const landings = [];
-let clock, manager, scene, camera, gltf, light;
+let clock, renderer, manager, scene, camera, gltf, light;
 let totalTime = 0;
 let eventsCount = 1;
 
 const init = async () => {
   // setup renderer
-  const renderer = new THREE.WebGLRenderer({
+  renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#canvas'),
   });
   const width = document.getElementById('canvas-wrapper').getBoundingClientRect().width;
@@ -121,6 +121,7 @@ const init = async () => {
 
   clock = new THREE.Clock();
 
+  onResize();
   render();
 }
 
@@ -265,3 +266,18 @@ const updateOrientationControls = (e) => {
 
 window.addEventListener('DOMContentLoaded', init);
 window.addEventListener('deviceorientation', updateOrientationControls, true);
+window.addEventListener('resize', onResize);
+
+function onResize() {
+  // サイズを取得
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  // レンダラーのサイズを調整する
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(width, height);
+
+  // カメラのアスペクト比を正す
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+}
