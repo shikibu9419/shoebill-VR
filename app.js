@@ -125,35 +125,23 @@ const init = async () => {
 }
 
 const animate = () => {
-  const flying = animations.Shoebill_fly;
-  const flyEnd = animations.Shoebill_fly_end;
   const animation = animations.Shoebill_walk;
   mixers.forEach(m => {
-    const flyAction = m.clipAction(flying).setLoop(THREE.LoopOnce);
-    const flyEndAction = m.clipAction(flyEnd).setLoop(THREE.LoopOnce);
     const action = m.clipAction(animation).setLoop(THREE.LoopRepeat);
     action.play();
-    // // action.setLoop(THREE.LoopRepeat);
-    // // action.clampWhenFinished = true;
-    // // flyAction.crossFadeTo(flyEndAction, flying.duration).crossFadeTo(action, flyEnd.duration).play();
-    // m.addEventListener('finished', (e) => {
-    //   console.log(e)
-    //   console.log(e.action._clip.name)
-    //   const action = m.clipAction(animation);
-    //   action.setDuration(3).play();
-    // })
-    // m.addEventListener('loop', (e) => {
-    //   console.log(e)
-    //   console.log(e.action._clip.name)
-    // })
   })
 }
 
 const addShoebill = () => {
+  if (!gltf) {
+    return;
+  }
+
   const flyAway = !getRandomInt(10);
 
   const copy = cloneGltf(gltf);
-  copy.scale.set(100, 100, 100);
+  const scale = getRandomInt(20) + 80;
+  copy.scale.set(scale, scale, scale);
 
   let radius = getRandomInt(RADIUS * 4) + RADIUS;
   const theta = 2 * Math.PI * (Math.random());
