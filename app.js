@@ -109,14 +109,13 @@ const init = async () => {
   );
 
   // setup light
-  light = new THREE.SpotLight(0xFFFFFF, 1, RADIUS * 5, Math.PI / 5, 10, 0.8);
+  light = new THREE.SpotLight(0xFFFFFF, 2, RADIUS * 5, Math.PI / 5, 10, 0.8);
   light.target = camera;
   scene.add(light);
-  scene.add(new THREE.AmbientLight(0xFFFFFF, 0.5))
 
   // for debug
-  const axis = new THREE.AxesHelper(1000);
-  scene.add(axis);
+  // const axis = new THREE.AxesHelper(1000);
+  // scene.add(axis);
   // lightHelper = new THREE.SpotLightHelper(light);
   // scene.add(lightHelper);
 
@@ -156,17 +155,13 @@ const addShoebill = () => {
   const copy = cloneGltf(gltf);
   copy.scale.set(100, 100, 100);
 
-  let radius = getRandomInt(300) + RADIUS * 3;
-  const theta = Math.PI / 2 * (Math.random());
-  // 正面 +-45度
-  // copy.rotation.y = theta + Math.PI * (Math.random() / 2 - 5 / 4);
+  let radius = getRandomInt(RADIUS * 4) + RADIUS;
+  const theta = 2 * Math.PI * (Math.random());
+
   copy.rotation.y = theta + Math.PI;
   copy.position.setFromCylindricalCoords(1000, theta, 200);
 
-  if (flyAway) {
-    radius = -1000;
-    copy.flyAway = flyAway;
-  }
+  copy.flyAway = flyAway;
   copy.destination = { radius, theta };
 
   copy.traverse((obj) => {
@@ -192,7 +187,6 @@ const render = () => {
   totalTime += delta;
 
   if (totalTime > 30 * eventsCount) {
-    console.log('ADD SHOEBILL!!');
     addShoebill();
     eventsCount++;
   }
