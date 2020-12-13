@@ -116,7 +116,33 @@ const init = async () => {
   // scene.add(lightHelper);
 
   clock = new THREE.Clock();
+
   render();
+}
+
+const animate = () => {
+  const flying = animations.Shoebill_fly;
+  const flyEnd = animations.Shoebill_fly_end;
+  const animation = animations.Shoebill_walk;
+  mixers.forEach(m => {
+    const flyAction = m.clipAction(flying).setLoop(THREE.LoopOnce);
+    const flyEndAction = m.clipAction(flyEnd).setLoop(THREE.LoopOnce);
+    const action = m.clipAction(animation).setLoop(THREE.LoopRepeat);
+    action.play();
+    // // action.setLoop(THREE.LoopRepeat);
+    // // action.clampWhenFinished = true;
+    // // flyAction.crossFadeTo(flyEndAction, flying.duration).crossFadeTo(action, flyEnd.duration).play();
+    // m.addEventListener('finished', (e) => {
+    //   console.log(e)
+    //   console.log(e.action._clip.name)
+    //   const action = m.clipAction(animation);
+    //   action.setDuration(3).play();
+    // })
+    // m.addEventListener('loop', (e) => {
+    //   console.log(e)
+    //   console.log(e.action._clip.name)
+    // })
+  })
 }
 
 const render = () => {
@@ -159,13 +185,13 @@ const setupShobillGlTF = (obj) => {
   }
 }
 
-// const updateOrientationControls = (e) => {
-//   if (!e.alpha) { return; }
-//   const control = new THREE.DeviceOrientationControls(camera, true);
-//   control.connect();
-//   control.update();
-//   window.removeEventListener('deviceorientation', updateOrientationControls, true);
-// }
+const updateOrientationControls = (e) => {
+  if (!e.alpha) { return; }
+  const control = new THREE.DeviceOrientationControls(camera, true);
+  control.connect();
+  control.update();
+  window.removeEventListener('deviceorientation', updateOrientationControls, true);
+}
 
 window.addEventListener('DOMContentLoaded', init);
-// window.addEventListener('deviceorientation', updateOrientationControls, true);
+window.addEventListener('deviceorientation', updateOrientationControls, true);
