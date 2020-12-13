@@ -101,6 +101,11 @@ const init = async () => {
       }
       animate();
 
+      var size = 10000;
+      var step = 100;
+
+      var gridHelper = new THREE.GridHelper(size, step);
+      scene.add(gridHelper);
     },
     (error) => {
       // console.log('An error happened');
@@ -112,12 +117,7 @@ const init = async () => {
   light = new THREE.SpotLight(0xFFFFFF, 2, RADIUS * 5, Math.PI / 5, 10, 0.8);
   light.target = camera;
   scene.add(light);
-
-  // for debug
-  // const axis = new THREE.AxesHelper(1000);
-  // scene.add(axis);
-  // lightHelper = new THREE.SpotLightHelper(light);
-  // scene.add(lightHelper);
+  scene.add(new THREE.AmbientLight(0xFFFFFF, 0.3));
 
   clock = new THREE.Clock();
 
@@ -150,7 +150,7 @@ const animate = () => {
 }
 
 const addShoebill = () => {
-  const flyAway = !getRandomInt(5);
+  const flyAway = !getRandomInt(10);
 
   const copy = cloneGltf(gltf);
   copy.scale.set(100, 100, 100);
@@ -186,7 +186,7 @@ const render = () => {
   const delta = clock.getDelta();
   totalTime += delta;
 
-  if (totalTime > 30 * eventsCount) {
+  if (totalTime > 10 * eventsCount) {
     addShoebill();
     eventsCount++;
   }
