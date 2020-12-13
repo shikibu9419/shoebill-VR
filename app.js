@@ -7,7 +7,7 @@ import './webvr-boilerplate/webvr-polyfill.js';
 import { VRButton } from './threejs/VRButton.js';
 import { cloneGltf } from './cloneGLTF.js';
 import { VRDesktopControls } from './VRDesktopControls.js';
-import { SHOEBILL_COUNT, RADIUS } from './utils.js';
+import { getRandomInt, SHOEBILL_COUNT, RADIUS } from './utils.js';
 import * as kagome from './kagome.js'
 
 let situation = kagome;
@@ -19,9 +19,11 @@ const controls = [];
 let animations = {};
 let textures = [];
 const shoebills = [];
+const flyings = [];
+const landings = [];
 let clock, manager, scene, camera;
 
-let light, lightHelper;
+let light;
 
 const init = async () => {
   // setup renderer
@@ -88,7 +90,7 @@ const init = async () => {
         // copy.rotation.y = phi + Math.PI;
 
         copy.traverse((obj) => {
-          if (obj.isMesh) setupShobillGlTF(obj);
+          if (obj.isMesh) setupShobillGLTF(obj);
         });
 
         mixers.push(new THREE.AnimationMixer(copy));
@@ -97,6 +99,36 @@ const init = async () => {
         scene.add(copy);
       }
       animate();
+
+      const clone = cloneGltf(gltf);
+      const copy = clone.scene;
+      copy.scale.set(100, 100, 100);
+
+      const radius = getRandomInt(300) + RADIUS * 3;
+      const theta = Math.PI / 2 * (Math.random());
+      // 正面 +-45度
+      // copy.rotation.y = theta + Math.PI * (Math.random() / 2 - 5 / 4);
+      copy.rotation.y = theta + Math.PI;
+      copy.position.setFromCylindricalCoords(1000, theta, 200);
+
+      copy.destination = { radius, theta };
+
+      copy.traverse((obj) => {
+        if (obj.isMesh) setupShobillGLTF(obj);
+      });
+
+      const mixer = new THREE.AnimationMixer(copy);
+      const animation = animations.Shoebill_fly;
+      const flyEnd = animations.Shoebill_fly_end;
+      const idle = animations.Shoebill_idle;
+      const action = mixer.clipAction(animation).setLoop(THREE.LoopRepeat);
+      mixer.clipAction(flyEnd).setLoop(THREE.LoopOnce);
+      mixer.clipAction(idle).setLoop(THREE.LoopRepeat);
+      action.play();
+
+      mixers.push(mixer);
+      flyings.push(copy);
+      scene.add(copy);
     },
     (error) => {
       // console.log('An error happened');
@@ -108,6 +140,7 @@ const init = async () => {
   light = new THREE.SpotLight(0xFFFFFF, 1, RADIUS * 5, Math.PI / 5, 10, 0.8);
   light.target = camera;
   scene.add(light);
+  scene.add(new THREE.AmbientLight(0xFFFFFF, 0.5))
 
   // for debug
   const axis = new THREE.AxesHelper(1000);
@@ -162,18 +195,47 @@ const render = () => {
   if (shoebills.length) {
     Promise.all(shoebills.map((s) => new Promise(situation.shoebillMovement(s, delta))))
   }
+  if (flyings.length) {
+    Promise.all(flyings.map((s, index) => new Promise(() => {
+      const r = Math.sqrt(Math.pow(s.position.x, 2) + Math.pow(s.position.z, 2));
+      if (r - s.destination.radius > 50) {
+        s.position.setFromCylindricalCoords(r - delta * 50, s.destination.theta, 200);
+      } else {
+        const mixer = mixers.find(m => m._root.uuid === s.uuid);
+        const newAction = mixer.existingAction(animations.Shoebill_fly_end);
+        mixer.existingAction(animations.Shoebill_fly).crossFadeTo(newAction, 1);
+        newAction.play();
+        flyings.splice(index, 1);
+        landings.push(s);
+      }
+    })))
+  }
+  if (landings.length) {
+    Promise.all(landings.map((s, index) => new Promise(() => {
+      const newY = s.position.y - delta * 50;
+      if (newY >= 0) {
+        s.position.y = newY;
+      } else {
+        s.position.y = 0;
+        const mixer = mixers.find(m => m._root.uuid === s.uuid);
+        const oldAction = mixer.existingAction(animations.Shoebill_fly_end);
+        const newAction = mixer.existingAction(animations.Shoebill_idle);
+        oldAction.crossFadeTo(newAction, 3);
+        newAction.play();
+        landings.splice(index, 1);
+      }
+    })))
+  }
 
   const cameraTargetPos = controls[0].targetPosition;
   light.position.set(-cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, -cameraTargetPos.z * 10);
-
-  // lightHelper.update();
 
   requestAnimationFrame(render);
 
   manager.render(scene, camera);
 }
 
-const setupShobillGlTF = (obj) => {
+const setupShobillGLTF = (obj) => {
   const material = obj.material;
   textures.forEach(t => {
     material.specularMap = t;
