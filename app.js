@@ -10,6 +10,8 @@ import { VRDesktopControls } from './VRDesktopControls.js';
 import { getRandomInt, SHOEBILL_COUNT, RADIUS } from './utils.js';
 import * as kagome from './kagome.js'
 
+const bgm = new Audio('./assets/kagome.wav');
+
 let situation = kagome;
 
 const GLTF_PATH = 'shoebill';
@@ -25,7 +27,7 @@ let clock, renderer, manager, scene, camera, gltf, light;
 let totalTime = 0;
 let eventsCount = 1;
 
-const init = async () => {
+const main = async () => {
   // setup renderer
   renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#canvas'),
@@ -74,6 +76,24 @@ const init = async () => {
     return t;
   }));
 
+  // setup light
+  light = new THREE.SpotLight(0xFFFFFF, 3, RADIUS * 5, Math.PI / 5, 10, 0.8);
+  light.target = camera;
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0xFFFFFF, 0.3));
+
+  // var size = 10000;
+  // var step = 100;
+
+  // var gridHelper = new THREE.GridHelper(size, step);
+  // scene.add(gridHelper);
+
+  clock = new THREE.Clock();
+  onResize();
+  render();
+}
+
+const init = () => {
   // Load GLTF File
   const loader = new THREE.GLTFLoader();
   loader.load(
@@ -100,6 +120,10 @@ const init = async () => {
         scene.add(copy);
       }
       animate();
+
+      bgm.loop = true;
+      bgm.volume = 0.8;
+      // bgm.play();
     },
     (error) => {
       // console.log('An error happened');
@@ -107,29 +131,14 @@ const init = async () => {
     }
   );
 
-  // setup light
-  light = new THREE.SpotLight(0xFFFFFF, 2, RADIUS * 5, Math.PI / 5, 10, 0.8);
-  light.target = camera;
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0xFFFFFF, 0.3));
-
-  // var size = 10000;
-  // var step = 100;
-
-  // var gridHelper = new THREE.GridHelper(size, step);
-  // scene.add(gridHelper);
-
-  clock = new THREE.Clock();
-
-  onResize();
-  render();
+  document.getElementById('screen').classList.remove('active');
 }
 
 const animate = () => {
   const animation = animations.Shoebill_walk;
   mixers.forEach(m => {
     const action = m.clipAction(animation).setLoop(THREE.LoopRepeat);
-    action.play();
+    // action.play();
   })
 }
 
@@ -257,19 +266,15 @@ const setupShobillGLTF = (obj) => {
   }
 }
 
-const updateOrientationControls = (e) => {
-  if (!e.alpha) { return; }
-  const control = new THREE.DeviceOrientationControls(camera, true);
-  control.connect();
-  control.update();
-  window.removeEventListener('deviceorientation', updateOrientationControls, true);
-}
+// const updateOrientationControls = (e) => {
+//   if (!e.alpha) { return; }
+//   const control = new THREE.DeviceOrientationControls(camera, true);
+//   control.connect();
+//   control.update();
+//   window.removeEventListener('deviceorientation', updateOrientationControls, true);
+// }
 
-window.addEventListener('DOMContentLoaded', init);
-window.addEventListener('deviceorientation', updateOrientationControls, true);
-window.addEventListener('resize', onResize);
-
-function onResize() {
+const onResize = () => {
   // サイズを取得
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -282,3 +287,8 @@ function onResize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
 }
+
+window.addEventListener('DOMContentLoaded', main);
+window.addEventListener('resize', onResize);
+document.getElementById('screen').addEventListener('click', init);
+// window.addEventListener('deviceorientation', updateOrientationControls, true);
