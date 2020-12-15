@@ -10,11 +10,13 @@ import { VRDesktopControls } from './VRDesktopControls.js';
 import { getRandomInt, SHOEBILL_COUNT, RADIUS } from './utils.js';
 import * as kagome from './kagome.js'
 
-const bgm = new Audio('./assets/kagome.wav');
-
 let situation = kagome;
-
 const GLTF_PATH = 'shoebill';
+
+let initialized = false;
+let idling = true;
+let starting = true;
+let firstPhi = 0;
 
 const mixers = [];
 const controls = [];
@@ -25,7 +27,19 @@ const flyings = [];
 const landings = [];
 let clock, renderer, manager, scene, camera, gltf, light;
 let totalTime = 0;
-let eventsCount = 1;
+let eventsCount = 0;
+let baseScale = 100;
+
+const bgm = new Audio('./assets/kagome.wav');
+bgm.loop = true;
+bgm.volume = 0.8;
+
+const updateLight = () => {
+  if (!light) return;
+
+  const cameraTargetPos = controls[0].targetPosition;
+  light.position.set(-cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, -cameraTargetPos.z * 10);
+}
 
 const main = async () => {
   // setup renderer
@@ -55,10 +69,12 @@ const main = async () => {
   manager = new WebVRManager(renderer, effect);
 
   // setup controls
-  // const vrControls = new THREE.VRControls(camera, (str) => console.log(str))
   const desktopControls = new VRDesktopControls(camera, renderer.domElement);
   desktopControls.lookAt(0, 100, RADIUS);
   controls.push(desktopControls);
+
+  // const vrControls = new THREE.VRControls(camera, (str) => console.log(str));
+  // controls.push(vrControls);
 
   // preload textures
   textures = await Promise.all([
@@ -81,12 +97,7 @@ const main = async () => {
   light.target = camera;
   scene.add(light);
   scene.add(new THREE.AmbientLight(0xFFFFFF, 0.3));
-
-  // var size = 10000;
-  // var step = 100;
-
-  // var gridHelper = new THREE.GridHelper(size, step);
-  // scene.add(gridHelper);
+  updateLight();
 
   clock = new THREE.Clock();
   onResize();
@@ -94,53 +105,77 @@ const main = async () => {
 }
 
 const init = () => {
+  if (initialized) return;
+
   // Load GLTF File
   const loader = new THREE.GLTFLoader();
   loader.load(
     `${GLTF_PATH}/scene.gltf`,
     (origin) => {
+      document.getElementById('screen').classList.remove('active');
+
       gltf = origin;
 
       animations = gltf.animations.reduce((acc, cur) => ({ ...acc, [cur.name]: cur }), {});
 
-      for (let i = 0; i < SHOEBILL_COUNT; i++) {
-        const copy = cloneGltf(gltf);
-        copy.scale.set(100, 100, 100);
+      const copy = cloneGltf(gltf);
+      copy.scale.set(baseScale, baseScale, baseScale);
+      situation.shoebillPosition(copy, 0);
 
-        situation.shoebillPosition(copy, i);
-        // copy.rotation.y = phi + Math.PI;
+      copy.rotation.y += Math.PI / 2;
 
-        copy.traverse((obj) => {
-          if (obj.isMesh) setupShobillGLTF(obj);
-        });
+      copy.traverse((obj) => {
+        if (obj.isMesh) setupShobillGLTF(obj);
+      });
 
-        mixers.push(new THREE.AnimationMixer(copy));
+      const mixer = new THREE.AnimationMixer(copy);
+      const action = mixer.clipAction(animations.Shoebill_idle).setLoop(THREE.LoopRepeat);
+      const nextAction = mixer.clipAction(animations.Shoebill_walk).setLoop(THREE.LoopRepeat);
+      action.play();
 
-        shoebills.push(copy);
-        scene.add(copy);
-      }
-      animate();
+      mixer.addEventListener('loop', (_) => {
+        if (!idling) return;
 
-      bgm.loop = true;
-      bgm.volume = 0.8;
-      // bgm.play();
-    },
-    (error) => {
-      // console.log('An error happened');
-      // console.log(error);
+        idling = false;
+
+        action.crossFadeTo(nextAction, 1);
+        nextAction.play();
+
+        start();
+      });
+
+      mixers.push(mixer);
+
+      shoebills.push(copy);
+      scene.add(copy);
     }
   );
 
-  document.getElementById('screen').classList.remove('active');
+  initialized = true;
 }
 
-const animate = () => {
-  const animation = animations.Shoebill_walk;
-  mixers.forEach(m => {
-    const action = m.clipAction(animation).setLoop(THREE.LoopRepeat);
-    // action.play();
+const start = () => Promise.all([...Array(SHOEBILL_COUNT - 1).keys()].map(i =>
+  new Promise(() => {
+    const copy = cloneGltf(gltf);
+    copy.scale.set(baseScale, baseScale, baseScale);
+
+    situation.shoebillPosition(copy, i + 1);
+
+    copy.traverse((obj) => {
+      if (obj.isMesh) setupShobillGLTF(obj);
+    });
+
+    const mixer = new THREE.AnimationMixer(copy);
+    const action = mixer.clipAction(animations.Shoebill_walk).setLoop(THREE.LoopRepeat);
+    action.play();
+
+    mixers.push(mixer);
+    mixer.update(0.0001);
+
+    shoebills.push(copy);
+    scene.add(copy);
   })
-}
+));
 
 const addShoebill = () => {
   if (!gltf) {
@@ -185,20 +220,42 @@ const render = () => {
   totalTime += delta;
   const fps = !delta ? 100 : 1 / delta;
 
-  if (totalTime > 10 * eventsCount && fps > 40) {
-    addShoebill();
+  if (totalTime > 10 * eventsCount) {
+    if (!starting && fps > 40) addShoebill();
+
     eventsCount++;
   }
 
-  if (controls.length) {
-    Promise.all(controls.map(c => new Promise(() => c.update(delta))));
+  if (mixers.length) {
+    Promise.all(mixers.map(m => m.update(delta)));
   }
 
-  if (mixers.length) {
-    Promise.all(mixers.map(m => new Promise(() => {
-      m.update(delta);
-      // console.log(m.time, m.timeScale, m)
-    })));
+  if (starting) {
+    if (!idling) {
+      const s = shoebills[0];
+      const rad = delta * Math.PI / 10;
+      firstPhi += rad;
+      if (firstPhi > Math.PI / 2) {
+        s.rotation.y = Math.PI / 2;
+        starting = false;
+        bgm.play();
+      } else {
+        s.rotation.y -= rad;
+      }
+    }
+
+    requestAnimationFrame(render);
+    manager.render(scene, camera);
+    return;
+  }
+
+  if (controls.length) {
+    Promise.all(controls.map(c =>
+      new Promise((resolve) => {
+        c.update(delta);
+        resolve();
+      })
+    )).then(() => updateLight());
   }
 
   if (shoebills.length) {
@@ -245,9 +302,6 @@ const render = () => {
       }
     })))
   }
-
-  const cameraTargetPos = controls[0].targetPosition;
-  light.position.set(-cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, -cameraTargetPos.z * 10);
 
   requestAnimationFrame(render);
 
