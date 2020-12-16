@@ -24,6 +24,9 @@ class VRDesktopControls {
     domElement.addEventListener('mousemove', _onMouseMove, false);
     domElement.addEventListener('mousedown', _onMouseDown, false);
     domElement.addEventListener('mouseup', _onMouseUp, false);
+    domElement.addEventListener('touchmove', _onMouseMove, false);
+    domElement.addEventListener('touchstart', _onMouseDown, false);
+    domElement.addEventListener('touchend', _onMouseUp, false);
     window.addEventListener('keydown', _onKeyDown, false);
     window.addEventListener('keyup', _onKeyUp, false);
     domElement.addEventListener('contextmenu', this.contextmenu, false);
