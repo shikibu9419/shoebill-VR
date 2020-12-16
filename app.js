@@ -1,6 +1,7 @@
 import 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.min.js';
 import 'https://cdn.jsdelivr.net/npm/webvr-boilerplate@latest/build/webvr-manager.min.js';
 import 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r123/examples/js/loaders/GLTFLoader.js';
+import 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r123/examples/js/controls/DeviceOrientationControls.js';
 import './threejs/VRControls.js';
 import './threejs/VREffect.js';
 import './webvr-boilerplate/webvr-polyfill.js';
@@ -37,8 +38,11 @@ bgm.volume = 0.8;
 const updateLight = () => {
   if (!light) return;
 
-  const cameraTargetPos = controls[0].targetPosition;
-  light.position.set(-cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, -cameraTargetPos.z * 10);
+  const lightDirection = new THREE.Euler().setFromQuaternion(camera.quaternion)
+  light.position.set(camera.position.x, camera.position.y, camera.position.z)
+  light.setRotationFromEuler(lightDirection)
+  console.log(light, lightDirection)
+  light.translateZ(10)
 }
 
 const main = async () => {
@@ -73,9 +77,6 @@ const main = async () => {
   desktopControls.lookAt(0, 100, RADIUS);
   controls.push(desktopControls);
 
-  // const vrControls = new THREE.VRControls(camera, (str) => console.log(str));
-  // controls.push(vrControls);
-
   // preload textures
   textures = await Promise.all([
     `${GLTF_PATH}/textures/body_diffuse.png`,
@@ -98,6 +99,8 @@ const main = async () => {
   scene.add(light);
   scene.add(new THREE.AmbientLight(0xFFFFFF, 0.3));
   updateLight();
+
+  // scene.add(new THREE.SpotLightHelper(light))
 
   clock = new THREE.Clock();
   onResize();
@@ -321,14 +324,6 @@ const setupShobillGLTF = (obj) => {
   }
 }
 
-// const updateOrientationControls = (e) => {
-//   if (!e.alpha) { return; }
-//   const control = new THREE.DeviceOrientationControls(camera, true);
-//   control.connect();
-//   control.update();
-//   window.removeEventListener('deviceorientation', updateOrientationControls, true);
-// }
-
 const onResize = () => {
   // サイズを取得
   const width = window.innerWidth;
@@ -343,7 +338,17 @@ const onResize = () => {
   camera.updateProjectionMatrix();
 }
 
+const updateOrientationControls = (e) => {
+  if (!e.alpha || !initialized) { return; }
+  const control = new THREE.DeviceOrientationControls(camera, true);
+  control.connect();
+  control.update();
+  controls.push(control);
+  camera.lookAt(0, 100, RADIUS);
+  window.removeEventListener('deviceorientation', updateOrientationControls, true);
+}
+
 window.addEventListener('DOMContentLoaded', main);
 window.addEventListener('resize', onResize);
+window.addEventListener('deviceorientation', updateOrientationControls, true);
 document.getElementById('screen').addEventListener('click', init);
-// window.addEventListener('deviceorientation', updateOrientationControls, true);
