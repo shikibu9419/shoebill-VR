@@ -107,6 +107,9 @@ const main = async () => {
 const init = () => {
   if (initialized) return;
 
+  initialized = true;
+  document.getElementById('screen-loading').classList.add('active');
+
   // Load GLTF File
   const loader = new THREE.GLTFLoader();
   loader.load(
@@ -150,8 +153,6 @@ const init = () => {
       scene.add(copy);
     }
   );
-
-  initialized = true;
 }
 
 const start = () => Promise.all([...Array(SHOEBILL_COUNT - 1).keys()].map(i =>

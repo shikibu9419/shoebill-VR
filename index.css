@@ -39,3 +39,11 @@ body {
     font-weight: bold;
     color: white;
 }
+.screen-loading {
+    color: white;
+    font-weight: bold;
+    display: none;
+}
+.screen-loading.active {
+    display: inline-block;
+}
