@@ -30,6 +30,7 @@ let clock, renderer, manager, scene, camera, gltf, light;
 let totalTime = 0;
 let eventsCount = 0;
 let baseScale = 100;
+let offSetRad = 0;
 
 const bgm = new Audio('./assets/kagome.wav');
 bgm.loop = true;
@@ -103,7 +104,9 @@ const main = async () => {
   scene.add(new THREE.AmbientLight(0xFFFFFF, 0.3));
   updateLight();
 
-  // scene.add(new THREE.SpotLightHelper(light))
+  if (!getRandomInt(10)) {
+    offSetRad = Math.PI / 2;
+  }
 
   clock = new THREE.Clock();
   onResize();
@@ -167,6 +170,7 @@ const start = () => Promise.all([...Array(SHOEBILL_COUNT - 1).keys()].map(i =>
     copy.scale.set(baseScale, baseScale, baseScale);
 
     situation.shoebillPosition(copy, i + 1);
+    copy.rotation.y += offSetRad
 
     copy.traverse((obj) => {
       if (obj.isMesh) setupShobillGLTF(obj);
@@ -242,8 +246,8 @@ const render = () => {
       const s = shoebills[0];
       const rad = delta * Math.PI / 10;
       firstPhi += rad;
-      if (firstPhi > Math.PI / 2) {
-        s.rotation.y = Math.PI / 2;
+      if (firstPhi > Math.PI / 2 - offSetRad) {
+        s.rotation.y = Math.PI / 2 + offSetRad;
         starting = false;
         bgm.play();
       } else {
@@ -351,7 +355,21 @@ const updateOrientationControls = (e) => {
   window.removeEventListener('deviceorientation', updateOrientationControls, true);
 }
 
+const onHandleClick = () => {
+  var count = 0;
+  return () => {
+    count++;
+    if (count < 10) {
+      console.log(`${count}...`)
+    } else if (starting) {
+      offSetRad = Math.PI / 2;
+      console.log('EXTRA MODE START!!')
+    }
+  }
+}
+
 window.addEventListener('DOMContentLoaded', main);
 window.addEventListener('resize', onResize);
 window.addEventListener('deviceorientation', updateOrientationControls, true);
 document.getElementById('screen').addEventListener('click', init);
+document.getElementById('canvas-wrapper').addEventListener('click', onHandleClick());
