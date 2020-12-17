@@ -269,12 +269,10 @@ class VRDesktopControls {
       phi = THREE.MathUtils.mapLinear(phi, 0, Math.PI, this.verticalMin, this.verticalMax);
     }
 
-    var position = this.object.position;
-
     this.deltaMouseX = this.mouseX - this.prevMouseX;
     this.deltaMouseY = this.mouseY - this.prevMouseY;
 
-    this.targetPosition.setFromSphericalCoords(1, phi, theta).add(position);
+    this.targetPosition.setFromSphericalCoords(1, phi, theta).add(this.object.position);
 
     this.object.lookAt(this.targetPosition);
 

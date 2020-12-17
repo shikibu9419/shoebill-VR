@@ -38,11 +38,14 @@ bgm.volume = 0.8;
 const updateLight = () => {
   if (!light) return;
 
-  const lightDirection = new THREE.Euler().setFromQuaternion(camera.quaternion)
-  light.position.set(camera.position.x, camera.position.y, camera.position.z)
-  light.setRotationFromEuler(lightDirection)
-  console.log(light, lightDirection)
-  light.translateZ(10)
+  if (controls.length > 1) {
+    const lightDirection = new THREE.Euler().setFromQuaternion(camera.quaternion)
+    light.position.set(camera.position.x, camera.position.y, camera.position.z)
+    light.setRotationFromEuler(lightDirection)
+  } else {
+    const cameraTargetPos = controls[0].targetPosition;
+    light.position.set(-cameraTargetPos.x * 10, 100 + (100 - cameraTargetPos.y) * 10, -cameraTargetPos.z * 10);
+  }
 }
 
 const main = async () => {
