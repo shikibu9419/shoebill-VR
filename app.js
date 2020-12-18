@@ -14,6 +14,10 @@ import * as kagome from './kagome.js'
 let situation = kagome;
 const GLTF_PATH = 'shoebill';
 
+const bgm = document.getElementById('bgm');
+bgm.loop = true;
+bgm.volume = 0;
+
 let initialized = false;
 let idling = true;
 let starting = true;
@@ -31,10 +35,6 @@ let totalTime = 0;
 let eventsCount = 0;
 let baseScale = 100;
 let offSetRad = 0;
-
-const bgm = new Audio('./assets/kagome.wav');
-bgm.loop = true;
-bgm.volume = 0.8;
 
 const updateLight = () => {
   if (!light) return;
@@ -249,7 +249,7 @@ const render = () => {
       if (firstPhi > Math.PI / 2 - offSetRad) {
         s.rotation.y = Math.PI / 2 + offSetRad;
         starting = false;
-        bgm.play();
+        bgm.volume = 1.0;
       } else {
         s.rotation.y -= rad;
       }
@@ -372,4 +372,5 @@ window.addEventListener('DOMContentLoaded', main);
 window.addEventListener('resize', onResize);
 window.addEventListener('deviceorientation', updateOrientationControls, true);
 document.getElementById('screen').addEventListener('click', init);
+document.getElementById('screen').onclick = function () { bgm.play() }
 document.getElementById('canvas-wrapper').addEventListener('click', onHandleClick());
