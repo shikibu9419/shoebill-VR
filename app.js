@@ -12,7 +12,8 @@ import { getRandomInt, SHOEBILL_COUNT, RADIUS } from './utils.js';
 import * as kagome from './kagome.js'
 
 let situation = kagome;
-const GLTF_PATH = 'shoebill';
+const EGGPLANT_PATH = 'eggplant';
+const SHOEBILL_PATH = 'shoebill';
 
 const bgm = document.getElementById('bgm');
 bgm.loop = true;
@@ -27,10 +28,11 @@ const mixers = [];
 const controls = [];
 let animations = {};
 let textures = [];
+const eggplants = [];
 const shoebills = [];
 const flyings = [];
 const landings = [];
-let clock, renderer, manager, scene, camera, gltf, light;
+let clock, renderer, manager, scene, camera, gltf, eggplant, light;
 let totalTime = 0;
 let eventsCount = 0;
 let baseScale = 100;
@@ -83,14 +85,14 @@ const main = async () => {
 
   // preload textures
   textures = await Promise.all([
-    `${GLTF_PATH}/textures/body_diffuse.png`,
-    `${GLTF_PATH}/textures/wing_diffuse.png`,
-    `${GLTF_PATH}/textures/eyes_specularGlossiness.png`,
-    `${GLTF_PATH}/textures/feather_specularGlossiness.png`,
-    `${GLTF_PATH}/textures/material_specularGlossiness.png`,
-    `${GLTF_PATH}/textures/peck_specularGlossiness.png`,
-    `${GLTF_PATH}/textures/tongue_specularGlossiness.png`,
-    `${GLTF_PATH}/textures/wing_specularGlossiness.png`
+    `${SHOEBILL_PATH}/textures/body_diffuse.png`,
+    `${SHOEBILL_PATH}/textures/wing_diffuse.png`,
+    `${SHOEBILL_PATH}/textures/eyes_specularGlossiness.png`,
+    `${SHOEBILL_PATH}/textures/feather_specularGlossiness.png`,
+    `${SHOEBILL_PATH}/textures/material_specularGlossiness.png`,
+    `${SHOEBILL_PATH}/textures/peck_specularGlossiness.png`,
+    `${SHOEBILL_PATH}/textures/tongue_specularGlossiness.png`,
+    `${SHOEBILL_PATH}/textures/wing_specularGlossiness.png`
   ].map(s => {
     const t = new THREE.TextureLoader().load(s);
     t.outputEncoding = THREE.sRGBEncoding;
@@ -121,8 +123,11 @@ const init = () => {
 
   // Load GLTF File
   const loader = new THREE.GLTFLoader();
+  loader.load(`${EGGPLANT_PATH}/scene.gltf`, (origin) => {
+    eggplant = origin;
+  });
   loader.load(
-    `${GLTF_PATH}/scene.gltf`,
+    `${SHOEBILL_PATH}/scene.gltf`,
     (origin) => {
       document.getElementById('screen').classList.remove('active');
 
@@ -188,6 +193,25 @@ const start = () => Promise.all([...Array(SHOEBILL_COUNT - 1).keys()].map(i =>
   })
 ));
 
+const addEggplant = () => {
+  if (!eggplant) {
+    return;
+  }
+
+  const copy = cloneGltf(eggplant);
+  const scale = getRandomInt(20) + 80;
+  copy.scale.set(scale, scale, scale);
+
+  let radius = getRandomInt(RADIUS * 4) + RADIUS;
+  const theta = 2 * Math.PI * (Math.random());
+
+  copy.rotation.y = theta + Math.PI;
+  copy.position.setFromCylindricalCoords(radius, theta, 500);
+
+  eggplants.push(copy);
+  scene.add(copy);
+}
+
 const addShoebill = () => {
   if (!gltf) {
     return;
@@ -232,7 +256,10 @@ const render = () => {
   const fps = !delta ? 100 : 1 / delta;
 
   if (totalTime > 10 * eventsCount) {
-    if (!starting && fps > 40) addShoebill();
+    if (!starting && fps > 40) {
+      addEggplant();
+      addShoebill();
+    }
 
     eventsCount++;
   }
@@ -267,6 +294,13 @@ const render = () => {
         resolve();
       })
     )).then(() => updateLight());
+  }
+
+  if (eggplants.length) {
+    Promise.all(eggplants.map((e) => new Promise(() => {
+      const newY = Math.max(e.position.y - delta * 100, 0);
+      e.position.setY(newY)
+    })))
   }
 
   if (shoebills.length) {
