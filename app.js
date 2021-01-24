@@ -158,6 +158,11 @@ const init = () => {
         action.crossFadeTo(nextAction, 1);
         nextAction.play();
 
+        new THREE.TextureLoader().load('assets/fujisan_shikaku.png', (t) => {
+          t.minFilter = THREE.LinearFilter;
+          scene.background = t;
+        });
+
         start();
       });
 

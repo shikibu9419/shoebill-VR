@@ -13,6 +13,9 @@ body {
     padding: 0;
     overflow: hidden;
 }
+canvas {
+    background: -webkit-canvas(url(/assets/fujisan_shikaku.png));
+}
 .canvas-wrapper {
     width : 100vw;
     height : 100vh;
