@@ -281,7 +281,10 @@ const render = () => {
       if (firstPhi > Math.PI / 2 - offSetRad) {
         s.rotation.y = Math.PI / 2 + offSetRad;
         starting = false;
+        bgm.pause();
         bgm.volume = 1.0;
+        bgm.currentTime = 0;
+        bgm.play();
       } else {
         s.rotation.y -= rad;
       }
